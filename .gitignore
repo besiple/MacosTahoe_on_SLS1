@@ -1,0 +1,6 @@
+# Build artifacts
+SurfaceTouch/build/obj/
+SurfaceTouch/MacKernelSDK/
+*.o
+*.pyc
+.DS_Store
