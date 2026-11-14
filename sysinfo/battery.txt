@@ -1,0 +1,23 @@
+Now drawing from 'AC Power'
+ -InternalBattery-0 (id=7012451)	100%; charged; 0:00 remaining present: true
+2026-11-14 05:56:04 -0800 
+Assertion status system-wide:
+   BackgroundTask                 0
+   ApplePushServiceTask           0
+   UserIsActive                   1
+   PreventUserIdleDisplaySleep    0
+   SoftwareUpdateTask             0
+   PreventSystemSleep             0
+   ExternalMedia                  0
+   InternalPreventDisplaySleep    1
+   PreventUserIdleSystemSleep     0
+   NetworkClientActive            0
+Listed by owning process:
+   pid 198(WindowServer): [0x0000002d00098068] 00:00:04 UserIsActive named: "com.apple.iohideventsystem.queue.tickle serviceID:1000004e1 service:AppleMultitouchDevice product:Magic Trackpad 2 eventType:11"  
+	Timeout will fire in 595 secs Action=TimeoutActionRelease
+   pid 432(cloudd): [0x000003c1000c8405] 00:00:00 SystemIsActive named: "NSURLSessionTask E0C8E626-0527-45BC-B7BA-0B7FCAF5F407"  
+	Timeout will fire in 10800 secs Action=TimeoutActionTurnOff
+   pid 107(powerd): [0x000002a40010829f] 00:04:43 InternalPreventDisplaySleep named: "com.apple.powermanagement.delayDisplayOff"  
+	Timeout will fire in 16 secs Action=TimeoutActionTurnOff
+No kernel assertions.
+Idle sleep preventers: IODisplayWrangler

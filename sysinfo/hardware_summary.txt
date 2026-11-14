@@ -1,0 +1,134 @@
+Hardware:
+
+    Hardware Overview:
+
+      Model Name: MacBook Pro
+      Model Identifier: MacBookPro16,2
+      Processor Name: 11th Gen Intel(R) Core(TM) i7-11370H @ 3.30GHz
+      Processor Speed: 3.3 GHz
+      Number of Processors: 1
+      Total Number of Cores: 4
+      L2 Cache (per Core): 1.3 MB
+      L3 Cache: 12 MB
+      Hyper-Threading Technology: Enabled
+      Memory: 16 GB
+      System Firmware Version: 2094.80.5.0.0
+      OS Loader Version: 583~6005
+      Serial Number (system): C02FL09CML7H
+      Hardware UUID: A7B8BA63-F674-5CC8-8415-97B7988FB855
+      Provisioning UDID: A7B8BA63-F674-5CC8-8415-97B7988FB855
+
+Graphics/Displays:
+
+    Intel Iris Xe Graphics:
+
+      Chipset Model: Intel Iris Xe Graphics
+      Type: GPU
+      Bus: Built-In
+      VRAM (Dynamic, Max): 1536 MB
+      Vendor: Intel
+      Device ID: 0x9a49
+      Revision ID: 0x0001
+      Metal Support: Metal 2
+      Displays:
+        Surface PixelSense (LQ144P1JX01):
+          Resolution: 2400 x 1600
+          UI Looks like: 1200 x 800 @ 120.00Hz
+          Framebuffer Depth: 30-Bit Color (ARGB2101010)
+          Main Display: Yes
+          Mirror: Off
+          Online: Yes
+          Automatically Adjust Brightness: No
+          Connection Type: Internal
+
+    Display:
+
+      Type: GPU
+      Bus: PCIe
+      PCIe Lane Width: x4
+      Vendor: NVIDIA (0x10de)
+      Device ID: 0x25a0
+      Revision ID: 0x00a1
+      Kernel Extension Info: No Kext Loaded
+
+Audio:
+
+    Devices:
+
+        Built-in Input:
+
+          Default Input Device: Yes
+          Input Channels: 2
+          Manufacturer: Apple Inc.
+          Current SampleRate: 44100
+          Transport: Built-in
+          Input Source: Internal Microphone
+
+        Built-in Output:
+
+          Default Output Device: Yes
+          Default System Output Device: Yes
+          Manufacturer: Apple Inc.
+          Output Channels: 2
+          Current SampleRate: 44100
+          Transport: Built-in
+          Output Source: Internal Speakers
+
+Power:
+
+    Battery Information:
+
+      Model Information:
+          Serial Number: 3416218
+          Manufacturer: XavierXia
+          Device Name: 1144021019
+          Pack Lot Code: 0
+          PCB Lot Code: 0
+          Firmware Version: 0
+          Hardware Revision: 0
+          Cell Revision: 0
+      Charge Information:
+          The battery’s charge is below the warning level: No
+          Fully Charged: Yes
+          Charging: No
+          Full Charge Capacity (mAh): 4091
+          State of Charge (%): 100
+      Health Information:
+          Cycle Count: 121
+          Condition: Normal
+
+    System Power Settings:
+
+      AC Power:
+          System Sleep Timer (Minutes): 10
+          Disk Sleep Timer (Minutes): 10
+          Display Sleep Timer (Minutes): 10
+          Wake on LAN: No
+          Current Power Source: Yes
+          Display Sleep Uses Dim: Yes
+          Hibernate Mode: 0
+          Low Power Mode: No
+          Prioritize Network Reachability Over Sleep: No
+      Battery Power:
+          System Sleep Timer (Minutes): 1
+          Disk Sleep Timer (Minutes): 10
+          Display Sleep Timer (Minutes): 2
+          Display Sleep Uses Dim: Yes
+          Hibernate Mode: 0
+          Low Power Mode: No
+          Reduce Brightness: Yes
+
+    Hardware Configuration:
+
+      UPS Installed: No
+
+    AC Charger Information:
+
+      Connected: Yes
+      ID: 0x0100
+      Wattage (W): 60
+      Revision: 0x0000
+      Family: 0x00ba
+      Serial Number: 0x00453cbe
+      Charging: No
+

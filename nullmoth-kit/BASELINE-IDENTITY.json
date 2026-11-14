@@ -1,0 +1,40 @@
+{
+  "package_version": "2.9",
+  "previous_package_version": "2.8.1",
+  "previous_archive_sha256": "1aa25a7f0ae28a27e77e1a761420cef9655af8b2b8effc1433142d1071795df8",
+  "runtime_minimum_macos": "15.5",
+  "runtime_qualification": {
+    "os": "15.8.1",
+    "gpu": "RTX 5060",
+    "displays": 2,
+    "guarded_boot": "passed",
+    "refresh_change_commits": "60, 75 and 100 Hz committed on the changed display",
+    "known_issue": "after a refresh change on one display the other display can show blank frames until restart",
+    "metal_buffer_copy_bytes": 4096,
+    "metal_copy_verified": true
+  },
+  "paired_kexts": {
+    "NVRM": {
+      "sha256": "c1d62ff7447374c1016c9207a10f75aa246010be1ca7e9127d6bb73ff8682693"
+    },
+    "NVRMFB": {
+      "sha256": "4890671d1f35e7c92646fc1968171e69026d7fa74850898ee8bcf716a77addde"
+    },
+    "NVAccel": {
+      "sha256": "b298771e5e70cf21819854101f6a3b74fb9e5bdcbf76fddb60f99ccdc58536cb"
+    },
+    "NVRMAGDC": {
+      "sha256": "97623c55c4a804fd5d4a5338d06672fe87f160576435853dc6b6e13505b325b9"
+    }
+  },
+  "scope": "1.1.0 plus: the install leaves the Metal allow list readable by WindowServer (the CoreDisplay 'Failed to create MetalDevice' crash loop after install), and the kexts stay off while the boot-picker remove flag is set, so the way back survives a restart. This update installs only on macOS 15.",
+  "unqualified": [
+    "refresh changes with two displays connected (known issue, fix planned for 1.2)",
+    "macOS 26",
+    "RTX 5090 physical qualification",
+    "universal device and application support",
+    "DRM",
+    "automatic internal EFI migration",
+    "optional DTrace capture"
+  ]
+}
