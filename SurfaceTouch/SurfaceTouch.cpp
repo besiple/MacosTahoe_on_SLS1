@@ -35,10 +35,41 @@ namespace {
     static_assert(sizeof(PRD) == 16, "PRD layout mismatch");
 
     // Synthetic HID Report Descriptor:
+    // Report 0x02: Absolute Mouse / Pointer for direct macOS desktop cursor control
     // Report 0x40: Touch Screen Digitizer with Finger logical collection, Tip Switch, Contact ID, X, Y (0..32767), Contact Count
     // Feature Report 0x05: Set Mode (0 = Singletouch, 1 = Multitouch)
     // Report 0x01: Pen / Stylus with Tip Switch, Barrel Switch, Invert, Eraser, X, Y, Tip Pressure, X/Y Tilt
     static const uint8_t sAugmentedDescriptor[] = {
+        // Report 0x02: Absolute Mouse / Pointer
+        0x05, 0x01,                    // Usage Page (Generic Desktop)
+        0x09, 0x02,                    // Usage (Mouse)
+        0xA1, 0x01,                    // Collection (Application)
+        0x85, 0x02,                    //   Report ID (2)
+        0x09, 0x01,                    //   Usage (Pointer)
+        0xA1, 0x00,                    //   Collection (Physical)
+        0x05, 0x09,                    //     Usage Page (Button)
+        0x19, 0x01,                    //     Usage Minimum (1)
+        0x29, 0x03,                    //     Usage Maximum (3)
+        0x15, 0x00,                    //     Logical Minimum (0)
+        0x25, 0x01,                    //     Logical Maximum (1)
+        0x75, 0x01,                    //     Report Size (1)
+        0x95, 0x03,                    //     Report Count (3)
+        0x81, 0x02,                    //     Input (Data, Var, Abs)
+        0x75, 0x05,                    //     Report Size (5)
+        0x95, 0x01,                    //     Report Count (1)
+        0x81, 0x03,                    //     Input (Cnst, Var, Abs)
+        0x05, 0x01,                    //     Usage Page (Generic Desktop)
+        0x09, 0x30,                    //     Usage (X)
+        0x09, 0x31,                    //     Usage (Y)
+        0x15, 0x00,                    //     Logical Minimum (0)
+        0x26, 0xFF, 0x7F,              //     Logical Maximum (32767)
+        0x75, 0x10,                    //     Report Size (16)
+        0x95, 0x02,                    //     Report Count (2)
+        0x81, 0x02,                    //     Input (Data, Var, Abs)
+        0xC0,                          //   End Collection (Physical)
+        0xC0,                          // End Collection (Application)
+
+        // Report 0x40: Touch Screen Digitizer
         0x05, 0x0D,                    // Usage Page (Digitizer)
         0x09, 0x04,                    // Usage (Touch Screen)
         0xA1, 0x01,                    // Collection (Application)
@@ -485,16 +516,28 @@ void SurfaceTouch::handleRx(const uint8_t *data, uint32_t len) {
                 IOLog("SurfaceTouch: touch #%u: tip=%d x=%u y=%u\n", ++touchLogCount, tip, x, y);
             }
 
-            uint8_t synth[7];
-            synth[0] = 0x40;
-            synth[1] = tip; // bit 0 = tip switch, bits 1..7 = contact id 0
-            synth[2] = payload[2];
-            synth[3] = payload[3];
-            synth[4] = payload[4];
-            synth[5] = payload[5];
-            synth[6] = tip ? 1 : 0; // contact count (1 when pressed, 0 when lifted)
-
             if (hid && reportBuffer) {
+                // 1. Send Absolute Mouse Report (Report ID 0x02) for direct macOS WindowServer cursor movement
+                uint8_t mouse[6];
+                mouse[0] = 0x02; // Report ID 2
+                mouse[1] = tip ? 0x01 : 0x00; // Button 1 (Left click)
+                mouse[2] = payload[2]; // X lo
+                mouse[3] = payload[3]; // X hi
+                mouse[4] = payload[4]; // Y lo
+                mouse[5] = payload[5]; // Y hi
+                memcpy(reportBuffer->getBytesNoCopy(), mouse, sizeof(mouse));
+                reportBuffer->setLength(sizeof(mouse));
+                hid->handleReport(reportBuffer, kIOHIDReportTypeInput);
+
+                // 2. Also send Touch Screen Digitizer Report (Report ID 0x40)
+                uint8_t synth[7];
+                synth[0] = 0x40;
+                synth[1] = tip; // bit 0 = tip switch, bits 1..7 = contact id 0
+                synth[2] = payload[2];
+                synth[3] = payload[3];
+                synth[4] = payload[4];
+                synth[5] = payload[5];
+                synth[6] = tip ? 1 : 0; // contact count (1 when pressed, 0 when lifted)
                 memcpy(reportBuffer->getBytesNoCopy(), synth, sizeof(synth));
                 reportBuffer->setLength(sizeof(synth));
                 hid->handleReport(reportBuffer, kIOHIDReportTypeInput);
@@ -589,9 +632,15 @@ void SurfaceTouch::idleTimeout(IOTimerEventSource *) {
 
 void SurfaceTouch::pollTimeout(IOTimerEventSource *timer) {
     if (stopping) return;
-    const uint32_t before = numReceived;
-    process();
-    timer->setTimeoutMS(numReceived != before ? 10 : 50);
+    if (polling) {
+        const uint32_t before = numReceived;
+        process();
+        timer->setTimeoutMS(numReceived != before ? 10 : 50);
+    } else {
+        // MSI interrupt is active: slow 2-second watchdog only, no high-frequency CPU wakeups!
+        process();
+        timer->setTimeoutMS(2000);
+    }
 }
 
 void SurfaceTouch::prepareDescriptor() {
@@ -759,7 +808,7 @@ bool SurfaceTouch::start(IOService *provider) {
             polling = true;
         }
 
-        // Always activate pollTimer as background watchdog/pump
+        // Activate pollTimer as fallback or slow watchdog
         pollTimer = IOTimerEventSource::timerEventSource(
             this,
             OSMemberFunctionCast(IOTimerEventSource::Action, this, &SurfaceTouch::pollTimeout)
@@ -768,7 +817,7 @@ bool SurfaceTouch::start(IOService *provider) {
             failStep = 24;
             goto fail;
         }
-        pollTimer->setTimeoutMS(polling ? 15 : 50);
+        pollTimer->setTimeoutMS(polling ? 15 : 2000);
 
         rxEnable();
 
