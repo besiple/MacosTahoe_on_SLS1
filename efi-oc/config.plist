@@ -42,7 +42,7 @@
 				<key>Comment</key>
 				<string>SSDT-SGPC.aml</string>
 				<key>Enabled</key>
-				<false/>
+				<true/>
 				<key>Path</key>
 				<string>SSDT-SGPC.aml</string>
 			</dict>
@@ -58,7 +58,7 @@
 				<key>Comment</key>
 				<string>SSDT-dGPU-Off.aml</string>
 				<key>Enabled</key>
-				<true/>
+				<false/>
 				<key>Path</key>
 				<string>SSDT-dGPU-Off.aml</string>
 			</dict>
@@ -148,11 +148,11 @@
 				AQ==
 				</data>
 			</dict>
-			<key>PciRoot(0x0)/Pci(0x6,0x0)/Pci(0x0,0x0)</key>
+			<key>PciRoot(0x0)/Pci(0x1D,0x0)/Pci(0x0,0x0)</key>
 			<dict>
-				<key>built-in</key>
+				<key>acpi-wake-type</key>
 				<data>
-				AQ==
+				AQAAAA==
 				</data>
 			</dict>
 			<key>PciRoot(0x0)/Pci(0x2,0x0)</key>
@@ -165,12 +165,16 @@
 				<data>
 				AADAAw==
 				</data>
-			</dict>
-			<key>PciRoot(0x0)/Pci(0x1D,0x0)/Pci(0x0,0x0)</key>
-			<dict>
-				<key>acpi-wake-type</key>
+				<key>framebuffer-unifiedmem</key>
 				<data>
-				AQAAAA==
+				AAAAgA==
+				</data>
+			</dict>
+			<key>PciRoot(0x0)/Pci(0x6,0x0)/Pci(0x0,0x0)</key>
+			<dict>
+				<key>built-in</key>
+				<data>
+				AQ==
 				</data>
 			</dict>
 		</dict>
@@ -779,15 +783,15 @@
 			</dict>
 			<key>4D1FDA02-38C7-4A6A-9CC6-4BCCA8B30102</key>
 			<dict>
-				<key>rtc-blacklist</key>
-				<data>
-				</data>
 				<key>revcpu</key>
 				<integer>1</integer>
 				<key>revcpuname</key>
 				<string>11th Gen Intel(R) Core(TM) i7-11370H @ 3.30GHz</string>
 				<key>revpatch</key>
 				<string>sbvmm,cpuname</string>
+				<key>rtc-blacklist</key>
+				<data>
+				</data>
 			</dict>
 			<key>7C436110-AB2A-4BBB-A880-FE41995C9F82</key>
 			<dict>
@@ -797,8 +801,16 @@
 				<data>
 				Rg==
 				</data>
+				<key>bluetoothExternalDongleFailed</key>
+				<data>
+				AA==
+				</data>
+				<key>bluetoothInternalControllerInfo</key>
+				<data>
+				AAAAAAAAAAAAAAAAAAA=
+				</data>
 				<key>boot-args</key>
-				<string>-v debug=0x100 keepsyms=1 -lilubetaall -revbeta -ibtcompatbeta -amfipassbeta -allow3d -disablegfxfirmware -igfxdvmt alcid=28 shda-lang=en</string>
+				<string>-v debug=0x100 keepsyms=1 -lilubetaall -revbeta -ibtcompatbeta -amfipassbeta -allow3d -disablegfxfirmware -igfxdvmt -wex-tgl-hold-render-wake alcid=28 shda-lang=en -nvrmnogo nvaccel=1 amfi_get_out_of_my_way=0x1 amfi=0x80 ipc_control_port_options=0</string>
 				<key>csr-active-config</key>
 				<data>
 				AwgAAA==
@@ -809,14 +821,6 @@
 				</data>
 				<key>run-efi-updater</key>
 				<string>No</string>
-				<key>bluetoothExternalDongleFailed</key>
-				<data>
-				AA==
-				</data>
-				<key>bluetoothInternalControllerInfo</key>
-				<data>
-				AAAAAAAAAAAAAAAAAAA=
-				</data>
 			</dict>
 		</dict>
 		<key>Delete</key>
