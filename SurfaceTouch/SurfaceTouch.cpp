@@ -34,22 +34,18 @@ namespace {
     };
     static_assert(sizeof(PRD) == 16, "PRD layout mismatch");
 
-    // Synthetic HID Report Descriptor:
-    // Report 0x02: Absolute Mouse / Pointer for direct macOS desktop cursor control
-    // Report 0x40: Touch Screen Digitizer with Finger logical collection, Tip Switch, Contact ID, X, Y (0..32767), Contact Count
-    // Feature Report 0x05: Set Mode (0 = Singletouch, 1 = Multitouch)
-    // Report 0x01: Pen / Stylus with Tip Switch, Barrel Switch, Invert, Eraser, X, Y, Tip Pressure, X/Y Tilt
+    // Pure Absolute Pointer / Mouse Descriptor for native macOS WindowServer cursor control.
+    // BigSurface will NOT match (it requires Digitizer Usage Page 0x0D).
+    // Native Apple IOHIDEventDriver matches and directly drives the system cursor and clicks.
     static const uint8_t sAugmentedDescriptor[] = {
-        // Report 0x02: Absolute Mouse / Pointer
         0x05, 0x01,                    // Usage Page (Generic Desktop)
         0x09, 0x02,                    // Usage (Mouse)
         0xA1, 0x01,                    // Collection (Application)
-        0x85, 0x02,                    //   Report ID (2)
         0x09, 0x01,                    //   Usage (Pointer)
         0xA1, 0x00,                    //   Collection (Physical)
         0x05, 0x09,                    //     Usage Page (Button)
-        0x19, 0x01,                    //     Usage Minimum (1)
-        0x29, 0x03,                    //     Usage Maximum (3)
+        0x19, 0x01,                    //     Usage Minimum (Button 1)
+        0x29, 0x03,                    //     Usage Maximum (Button 3)
         0x15, 0x00,                    //     Logical Minimum (0)
         0x25, 0x01,                    //     Logical Maximum (1)
         0x75, 0x01,                    //     Report Size (1)
@@ -67,67 +63,7 @@ namespace {
         0x95, 0x02,                    //     Report Count (2)
         0x81, 0x02,                    //     Input (Data, Var, Abs)
         0xC0,                          //   End Collection (Physical)
-        0xC0,                          // End Collection (Application)
-
-        // Report 0x40: Touch Screen Digitizer
-        0x05, 0x0D,                    // Usage Page (Digitizer)
-        0x09, 0x04,                    // Usage (Touch Screen)
-        0xA1, 0x01,                    // Collection (Application)
-        0x85, 0x40,                    //   Report ID (64)
-        0x09, 0x22,                    //   Usage (Finger)
-        0xA1, 0x02,                    //   Collection (Logical)
-        0x09, 0x42,                    //     Usage (Tip Switch)
-        0x15, 0x00,                    //     Logical Minimum (0)
-        0x25, 0x01,                    //     Logical Maximum (1)
-        0x75, 0x01,                    //     Report Size (1)
-        0x95, 0x01,                    //     Report Count (1)
-        0x81, 0x02,                    //     Input (Data, Var, Abs)
-        0x09, 0x51,                    //     Usage (Contact Identifier)
-        0x25, 0x0F,                    //     Logical Maximum (15)
-        0x75, 0x07,                    //     Report Size (7)
-        0x81, 0x02,                    //     Input (Data, Var, Abs)
-        0x05, 0x01,                    //     Usage Page (Generic Desktop)
-        0x09, 0x30,                    //     Usage (X)
-        0x75, 0x10,                    //     Report Size (16)
-        0x95, 0x01,                    //     Report Count (1)
-        0xA4,                          //     Push
-        0x55, 0x0E,                    //     Unit Exponent (-2)
-        0x65, 0x11,                    //     Unit (Centimeter)
-        0x46, 0xD7, 0x0B,              //     Physical Maximum (3031)
-        0x26, 0xFF, 0x7F,              //     Logical Maximum (32767)
-        0x81, 0x02,                    //     Input (Data, Var, Abs)
-        0x09, 0x31,                    //     Usage (Y)
-        0x46, 0xDA, 0x07,              //     Physical Maximum (2010)
-        0x26, 0xFF, 0x7F,              //     Logical Maximum (32767)
-        0x81, 0x02,                    //     Input (Data, Var, Abs)
-        0xB4,                          //     Pop
-        0xC0,                          //   End Collection (Logical)
-        0x05, 0x0D,                    //   Usage Page (Digitizer)
-        0x09, 0x54,                    //   Usage (Contact Count)
-        0x25, 0x01,                    //   Logical Maximum (1)
-        0x75, 0x08,                    //   Report Size (8)
-        0x95, 0x01,                    //   Report Count (1)
-        0x81, 0x02,                    //   Input (Data, Var, Abs)
-        0x85, 0x05,                    //   Report ID (5)
-        0x06, 0x00, 0xFF,              //   Usage Page (Vendor 0xFF00)
-        0x09, 0xC8,                    //   Usage (Set Mode 0xC8)
-        0x15, 0x00,                    //   Logical Minimum (0)
-        0x26, 0xFF, 0x00,              //   Logical Maximum (255)
-        0x75, 0x08,                    //   Report Size (8)
-        0x95, 0x01,                    //   Report Count (1)
-        0xB1, 0x02,                    //   Feature (Data, Var, Abs)
-        0xC0,                          // End Collection (Touch Screen)
-
-        // Report 0x01: Pen / Stylus from hardware descriptor
-        0x05, 0x0D, 0x09, 0x02, 0xA1, 0x01, 0x85, 0x01, 0x09, 0x20, 0x35, 0x00, 0xA1, 0x00, 0x09, 0x32,
-        0x09, 0x42, 0x09, 0x44, 0x09, 0x3C, 0x09, 0x45, 0x15, 0x00, 0x25, 0x01, 0x75, 0x01, 0x95, 0x05,
-        0x81, 0x02, 0x95, 0x03, 0x81, 0x03, 0x05, 0x01, 0x09, 0x30, 0x75, 0x10, 0x95, 0x01, 0xA4, 0x55,
-        0x0E, 0x65, 0x11, 0x46, 0xD7, 0x0B, 0x26, 0x80, 0x25, 0x81, 0x02, 0x09, 0x31, 0x46, 0xDA, 0x07,
-        0x26, 0x20, 0x1C, 0x81, 0x02, 0xB4, 0x05, 0x0D, 0x09, 0x30, 0x26, 0x00, 0x10, 0x81, 0x02, 0xA4,
-        0x55, 0x0E, 0x65, 0x14, 0x36, 0xD8, 0xDC, 0x46, 0x28, 0x23, 0x26, 0x50, 0x46, 0x09, 0x3D, 0x81,
-        0x02, 0x09, 0x3E, 0x81, 0x02, 0x55, 0x0C, 0x66, 0x01, 0x10, 0x35, 0x00, 0x47, 0xFF, 0xFF, 0x00,
-        0x00, 0x27, 0xFF, 0xFF, 0x00, 0x00, 0x09, 0x56, 0x81, 0x02, 0xB4, 0x06, 0x00, 0xFF, 0x09, 0x01,
-        0x75, 0x08, 0x95, 0x01, 0x81, 0x02, 0x81, 0x03, 0xC0, 0xC0
+        0xC0                           // End Collection (Application)
     };
 }
 
@@ -517,29 +453,16 @@ void SurfaceTouch::handleRx(const uint8_t *data, uint32_t len) {
             }
 
             if (hid && reportBuffer) {
-                // 1. Send Absolute Mouse Report (Report ID 0x02) for direct macOS WindowServer cursor movement
-                uint8_t mouse[6];
-                mouse[0] = 0x02; // Report ID 2
-                mouse[1] = tip ? 0x01 : 0x00; // Button 1 (Left click)
-                mouse[2] = payload[2]; // X lo
-                mouse[3] = payload[3]; // X hi
-                mouse[4] = payload[4]; // Y lo
-                mouse[5] = payload[5]; // Y hi
+                // Send 5-byte pure Absolute Mouse Report [Button, X_lo, X_hi, Y_lo, Y_hi]
+                // Directly received by Apple IOHIDEventDriver to move system cursor & click
+                uint8_t mouse[5];
+                mouse[0] = tip ? 0x01 : 0x00; // Button 1 (Left click down when tip=1, up when tip=0)
+                mouse[1] = payload[2]; // X lo
+                mouse[2] = payload[3]; // X hi
+                mouse[3] = payload[4]; // Y lo
+                mouse[4] = payload[5]; // Y hi
                 memcpy(reportBuffer->getBytesNoCopy(), mouse, sizeof(mouse));
                 reportBuffer->setLength(sizeof(mouse));
-                hid->handleReport(reportBuffer, kIOHIDReportTypeInput);
-
-                // 2. Also send Touch Screen Digitizer Report (Report ID 0x40)
-                uint8_t synth[7];
-                synth[0] = 0x40;
-                synth[1] = tip; // bit 0 = tip switch, bits 1..7 = contact id 0
-                synth[2] = payload[2];
-                synth[3] = payload[3];
-                synth[4] = payload[4];
-                synth[5] = payload[5];
-                synth[6] = tip ? 1 : 0; // contact count (1 when pressed, 0 when lifted)
-                memcpy(reportBuffer->getBytesNoCopy(), synth, sizeof(synth));
-                reportBuffer->setLength(sizeof(synth));
                 hid->handleReport(reportBuffer, kIOHIDReportTypeInput);
             }
         } else if (hid && reportBuffer && size <= reportBuffer->getCapacity()) {
@@ -954,7 +877,7 @@ OSString *SurfaceTouchHIDDevice::newManufacturerString() const {
 }
 
 OSString *SurfaceTouchHIDDevice::newProductString() const {
-    return OSString::withCString("Surface Touchscreen Digitizer");
+    return OSString::withCString("Surface Touch Pointer");
 }
 
 OSNumber *SurfaceTouchHIDDevice::newVendorIDNumber() const {
