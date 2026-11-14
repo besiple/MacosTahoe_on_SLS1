@@ -322,8 +322,15 @@ void SurfaceTouch::rxEnable() {
 }
 
 bool SurfaceTouch::txInit() {
-    if (maxTx > PAGE_SIZE) return false;
-    if (!allocDMA(txPrds, sizeof(PRD)) || !allocDMA(txBuf, PAGE_SIZE)) return false;
+    uint32_t txSize = maxTx ? maxTx : PAGE_SIZE;
+    if (txSize > 64 * 1024) {
+        IOLog("SurfaceTouch: txInit failed, maxTx too large (%u)\n", txSize);
+        return false;
+    }
+    if (!allocDMA(txPrds, sizeof(PRD)) || !allocDMA(txBuf, txSize)) {
+        IOLog("SurfaceTouch: txInit failed allocating DMA (txSize=%u)\n", txSize);
+        return false;
+    }
     w64(DmaTxAddr, txPrds.dma);
     w8(DmaTxNumPrds, 0);
     auto prd = reinterpret_cast<PRD *>(txPrds.addr);
@@ -542,21 +549,22 @@ void SurfaceTouch::prepareDescriptor() {
 }
 
 bool SurfaceTouch::readDescriptor() {
-    for (unsigned retries = 0; retries < 6; ++retries) {
+    for (unsigned retries = 0; retries < 10; ++retries) {
         IOLockLock(waitLock);
         rdescDone = false;
         IOLockUnlock(waitLock);
-        if (sendData(Tx::GetReportDescriptor, nullptr, 0) != kIOReturnSuccess) continue;
-        IOLockLock(waitLock);
-        AbsoluteTime deadline;
-        clock_interval_to_deadline(200, kMillisecondScale, &deadline);
-        while (!rdescDone) {
-            if (IOLockSleepDeadline(waitLock, &rdescDone, deadline, THREAD_UNINT) == THREAD_TIMED_OUT)
-                break;
+        if (sendData(Tx::GetReportDescriptor, nullptr, 0) != kIOReturnSuccess) {
+            IOSleep(50);
+            continue;
         }
-        const bool done = rdescDone && rdesc;
-        IOLockUnlock(waitLock);
-        if (done) return true;
+        for (unsigned poll = 0; poll < 30; ++poll) {
+            IOSleep(20);
+            process();
+            IOLockLock(waitLock);
+            const bool done = rdescDone && rdesc;
+            IOLockUnlock(waitLock);
+            if (done) return true;
+        }
     }
     return false;
 }
@@ -643,30 +651,32 @@ bool SurfaceTouch::start(IOService *provider) {
         reportBuffer = IOBufferMemoryDescriptor::withCapacity(maxRx, kIODirectionOut);
         if (!reportBuffer) { failStep = 23; goto fail; }
 
-        if (polling) {
-            IOLog("SurfaceTouch: running in polling mode\n");
-            pollTimer = IOTimerEventSource::timerEventSource(
-                this,
-                OSMemberFunctionCast(IOTimerEventSource::Action, this, &SurfaceTouch::pollTimeout)
-            );
-            if (!pollTimer || workLoop->addEventSource(pollTimer) != kIOReturnSuccess) {
-                failStep = 24;
-                goto fail;
-            }
-            pollTimer->setTimeoutMS(50);
-        } else {
+        if (msi >= 0 && !polling) {
             IOLog("SurfaceTouch: registering MSI interrupt index %d\n", msi);
             interrupt = IOInterruptEventSource::interruptEventSource(
                 this,
                 OSMemberFunctionCast(IOInterruptEventSource::Action, this, &SurfaceTouch::interruptOccurred),
                 pci, msi
             );
-            if (!interrupt || workLoop->addEventSource(interrupt) != kIOReturnSuccess) {
-                failStep = 25;
-                goto fail;
+            if (interrupt && workLoop->addEventSource(interrupt) == kIOReturnSuccess) {
+                interrupt->enable();
+            } else {
+                polling = true;
             }
-            interrupt->enable();
+        } else {
+            polling = true;
         }
+
+        // Always activate pollTimer as background watchdog/pump
+        pollTimer = IOTimerEventSource::timerEventSource(
+            this,
+            OSMemberFunctionCast(IOTimerEventSource::Action, this, &SurfaceTouch::pollTimeout)
+        );
+        if (!pollTimer || workLoop->addEventSource(pollTimer) != kIOReturnSuccess) {
+            failStep = 24;
+            goto fail;
+        }
+        pollTimer->setTimeoutMS(polling ? 15 : 50);
 
         rxEnable();
 
