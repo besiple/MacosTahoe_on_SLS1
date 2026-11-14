@@ -2,8 +2,14 @@
 #import <Metal/Metal.h>
 #import <QuartzCore/QuartzCore.h>
 #import <simd/simd.h>
+#import <stddef.h>
 #import <stdlib.h>
 #import <stdio.h>
+
+struct Vertex {
+    simd_float2 position;
+    simd_float4 color;
+};
 
 static id<MTLDevice> findDevice(NSString *which) {
     for (id<MTLDevice> d in MTLCopyAllDevices()) {
@@ -115,13 +121,18 @@ static id<MTLDevice> findDevice(NSString *which) {
 
     MTLVertexDescriptor *vd = [MTLVertexDescriptor vertexDescriptor];
     vd.attributes[0].format = MTLVertexFormatFloat2;
-    vd.attributes[0].offset = 0;
+    vd.attributes[0].offset = offsetof(struct Vertex, position);
     vd.attributes[0].bufferIndex = 0;
     vd.attributes[1].format = MTLVertexFormatFloat4;
-    vd.attributes[1].offset = sizeof(simd_float2);
+    vd.attributes[1].offset = offsetof(struct Vertex, color);
     vd.attributes[1].bufferIndex = 0;
-    vd.layouts[0].stride = sizeof(simd_float2) + sizeof(simd_float4);
+    vd.layouts[0].stride = sizeof(struct Vertex);
     vd.layouts[0].stepFunction = MTLVertexStepFunctionPerVertex;
+
+    NSLog(@"Vertex layout: pos=%zu color=%zu stride=%zu",
+          offsetof(struct Vertex, position),
+          offsetof(struct Vertex, color),
+          sizeof(struct Vertex));
 
     MTLRenderPipelineDescriptor *pd = [MTLRenderPipelineDescriptor new];
     pd.vertexFunction = [lib newFunctionWithName:@"vs"];
@@ -137,15 +148,12 @@ static id<MTLDevice> findDevice(NSString *which) {
 }
 
 - (void)renderFrame {
+    if (self.isRendering) return;
+
     if (self.currentFrame >= self.totalFrames) {
         [self.timer invalidate];
         NSLog(@"Finished %u frames. Exiting cleanly.", self.totalFrames);
         [NSApp terminate:nil];
-        return;
-    }
-
-    if ([self.mode isEqualToString:@"B"] && self.isRendering) {
-        // Mode B: wait for previous frame completion before scheduling next
         return;
     }
 
@@ -156,12 +164,6 @@ static id<MTLDevice> findDevice(NSString *which) {
 
     unsigned frameNum = self.currentFrame++;
     self.isRendering = YES;
-
-    // Animated rotating colored triangle with 3 vertices
-    struct Vertex {
-        simd_float2 position;
-        simd_float4 color;
-    };
 
     struct Vertex vertices[3] = {
         { {  0.0f,  0.75f }, { 1.0f, 0.0f, 0.0f, 1.0f } }, // Red top
@@ -181,7 +183,6 @@ static id<MTLDevice> findDevice(NSString *which) {
     pass.colorAttachments[0].texture = drawable.texture;
     pass.colorAttachments[0].loadAction = MTLLoadActionClear;
     pass.colorAttachments[0].storeAction = MTLStoreActionStore;
-    // Dark background cycling slightly with frame
     float bg = (float)((frameNum * 3) % 256) / 1024.0f;
     pass.colorAttachments[0].clearColor = MTLClearColorMake(bg, bg, bg, 1.0);
 
@@ -192,39 +193,31 @@ static id<MTLDevice> findDevice(NSString *which) {
     [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:3];
     [enc endEncoding];
 
-    if ([self.mode isEqualToString:@"A"]) {
-        // A: Standard registration of present before commit
+    BOOL modeB = [self.mode isEqualToString:@"B"];
+    id<CAMetalDrawable> heldDrawable = modeB ? drawable : nil;
+    __weak typeof(self) weakSelf = self;
+    if (!modeB) {
         [cmd presentDrawable:drawable];
-        [cmd addCompletedHandler:^(id<MTLCommandBuffer> cb) {
-            if (cb.status != MTLCommandBufferStatusCompleted) {
-                NSLog(@"Frame %u GPU ERROR: %@", frameNum, cb.error);
-            }
-        }];
-        [cmd commit];
-        self.isRendering = NO;
-        if (frameNum % 30 == 0) {
-            NSLog(@"[Mode A] Rendered frame %u / %u", frameNum, self.totalFrames);
-        }
-    } else {
-        // B: Diagnostic delay: do NOT call presentDrawable: on command buffer.
-        // Present heldDrawable ONLY when GPU reports completion.
-        id<CAMetalDrawable> heldDrawable = drawable;
-        __weak typeof(self) weakSelf = self;
-        [cmd addCompletedHandler:^(id<MTLCommandBuffer> finished) {
-            if (finished.status != MTLCommandBufferStatusCompleted) {
-                NSLog(@"Frame %u GPU ERROR: %@", frameNum, finished.error);
-                return;
-            }
-            dispatch_async(dispatch_get_main_queue(), ^{
-                [heldDrawable present];
-                weakSelf.isRendering = NO;
-                if (frameNum % 30 == 0) {
-                    NSLog(@"[Mode B] Presented held frame %u / %u (GPU completed)", frameNum, weakSelf.totalFrames);
-                }
-            });
-        }];
-        [cmd commit];
     }
+    [cmd addCompletedHandler:^(id<MTLCommandBuffer> finished) {
+        MTLCommandBufferStatus status = finished.status;
+        NSError *gpuError = finished.error;
+        dispatch_async(dispatch_get_main_queue(), ^{
+            AppController *controller = weakSelf;
+            if (!controller) return;
+            if (status != MTLCommandBufferStatusCompleted) {
+                NSLog(@"FAIL frame=%u status=%lu error=%@", frameNum, (unsigned long)status, gpuError);
+                [controller.timer invalidate];
+                exit(1);
+            }
+            if (modeB) {
+                [heldDrawable present];
+            }
+            NSLog(@"COMPLETED frame=%u mode=%@", frameNum, controller.mode);
+            controller.isRendering = NO;
+        });
+    }];
+    [cmd commit];
 }
 
 @end
@@ -238,7 +231,7 @@ int main(int argc, const char *argv[]) {
 
         NSString *gpuArg = [NSString stringWithUTF8String:argv[1]];
         NSString *modeArg = [NSString stringWithUTF8String:argv[2]];
-        unsigned totalFrames = (argc >= 4) ? (unsigned)atoi(argv[3]) : 120;
+        unsigned totalFrames = (argc >= 4) ? (unsigned)atoi(argv[3]) : 60;
 
         id<MTLDevice> device = findDevice(gpuArg);
         if (!device) {
