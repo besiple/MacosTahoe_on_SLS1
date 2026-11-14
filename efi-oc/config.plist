@@ -42,7 +42,7 @@
 				<key>Comment</key>
 				<string>SSDT-SGPC.aml</string>
 				<key>Enabled</key>
-				<true/>
+				<false/>
 				<key>Path</key>
 				<string>SSDT-SGPC.aml</string>
 			</dict>
@@ -58,7 +58,7 @@
 				<key>Comment</key>
 				<string>SSDT-dGPU-Off.aml</string>
 				<key>Enabled</key>
-				<false/>
+				<true/>
 				<key>Path</key>
 				<string>SSDT-dGPU-Off.aml</string>
 			</dict>
@@ -810,7 +810,7 @@
 				AAAAAAAAAAAAAAAAAAA=
 				</data>
 				<key>boot-args</key>
-				<string>debug=0x100 keepsyms=1 -lilubetaall -revbeta -ibtcompatbeta -amfipassbeta -allow3d -disablegfxfirmware -igfxdvmt -wex-tgl-hold-render-wake alcid=28 shda-lang=en</string>
+				<string>debug=0x100 keepsyms=1 -lilubetaall -revbeta -ibtcompatbeta -amfipassbeta -allow3d -disablegfxfirmware -igfxdvmt alcid=28 shda-lang=en</string>
 				<key>csr-active-config</key>
 				<data>
 				AwgAAA==
