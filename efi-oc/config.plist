@@ -165,6 +165,10 @@
 				<data>
 				AADAAw==
 				</data>
+				<key>framebuffer-unifiedmem</key>
+				<data>
+				AAAAgA==
+				</data>
 			</dict>
 			<key>PciRoot(0x0)/Pci(0x6,0x0)/Pci(0x0,0x0)</key>
 			<dict>
