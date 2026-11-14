@@ -192,12 +192,15 @@ class SurfaceTouchHIDDevice : public IOHIDDevice {
     using super = IOHIDDevice;
 public:
     bool init(SurfaceTouch *owner);
+    bool handleStart(IOService *provider) override;
+    void handleStop(IOService *provider) override;
     IOReturn newReportDescriptor(IOMemoryDescriptor **descriptor) const override;
     OSString *newTransportString() const override;
     OSString *newManufacturerString() const override;
     OSString *newProductString() const override;
     OSNumber *newVendorIDNumber() const override;
     OSNumber *newProductIDNumber() const override;
+    OSNumber *newVersionNumber() const override;
     OSNumber *newLocationIDNumber() const override;
     IOReturn setReport(IOMemoryDescriptor *report, IOHIDReportType reportType, IOOptionBits options) override;
     IOReturn getReport(IOMemoryDescriptor *report, IOHIDReportType reportType, IOOptionBits options) override;

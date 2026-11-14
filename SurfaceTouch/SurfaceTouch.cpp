@@ -33,6 +33,71 @@ namespace {
         uint32_t unused;
     };
     static_assert(sizeof(PRD) == 16, "PRD layout mismatch");
+
+    // Synthetic HID Report Descriptor:
+    // Report 0x40: Touch Screen Digitizer with Finger logical collection, Tip Switch, Contact ID, X, Y (0..32767), Contact Count
+    // Feature Report 0x05: Set Mode (0 = Singletouch, 1 = Multitouch)
+    // Report 0x01: Pen / Stylus with Tip Switch, Barrel Switch, Invert, Eraser, X, Y, Tip Pressure, X/Y Tilt
+    static const uint8_t sAugmentedDescriptor[] = {
+        0x05, 0x0D,                    // Usage Page (Digitizer)
+        0x09, 0x04,                    // Usage (Touch Screen)
+        0xA1, 0x01,                    // Collection (Application)
+        0x85, 0x40,                    //   Report ID (64)
+        0x09, 0x22,                    //   Usage (Finger)
+        0xA1, 0x02,                    //   Collection (Logical)
+        0x09, 0x42,                    //     Usage (Tip Switch)
+        0x15, 0x00,                    //     Logical Minimum (0)
+        0x25, 0x01,                    //     Logical Maximum (1)
+        0x75, 0x01,                    //     Report Size (1)
+        0x95, 0x01,                    //     Report Count (1)
+        0x81, 0x02,                    //     Input (Data, Var, Abs)
+        0x09, 0x51,                    //     Usage (Contact Identifier)
+        0x25, 0x0F,                    //     Logical Maximum (15)
+        0x75, 0x07,                    //     Report Size (7)
+        0x81, 0x02,                    //     Input (Data, Var, Abs)
+        0x05, 0x01,                    //     Usage Page (Generic Desktop)
+        0x09, 0x30,                    //     Usage (X)
+        0x75, 0x10,                    //     Report Size (16)
+        0x95, 0x01,                    //     Report Count (1)
+        0xA4,                          //     Push
+        0x55, 0x0E,                    //     Unit Exponent (-2)
+        0x65, 0x11,                    //     Unit (Centimeter)
+        0x46, 0xD7, 0x0B,              //     Physical Maximum (3031)
+        0x26, 0xFF, 0x7F,              //     Logical Maximum (32767)
+        0x81, 0x02,                    //     Input (Data, Var, Abs)
+        0x09, 0x31,                    //     Usage (Y)
+        0x46, 0xDA, 0x07,              //     Physical Maximum (2010)
+        0x26, 0xFF, 0x7F,              //     Logical Maximum (32767)
+        0x81, 0x02,                    //     Input (Data, Var, Abs)
+        0xB4,                          //     Pop
+        0xC0,                          //   End Collection (Logical)
+        0x05, 0x0D,                    //   Usage Page (Digitizer)
+        0x09, 0x54,                    //   Usage (Contact Count)
+        0x25, 0x01,                    //   Logical Maximum (1)
+        0x75, 0x08,                    //   Report Size (8)
+        0x95, 0x01,                    //   Report Count (1)
+        0x81, 0x02,                    //   Input (Data, Var, Abs)
+        0x85, 0x05,                    //   Report ID (5)
+        0x06, 0x00, 0xFF,              //   Usage Page (Vendor 0xFF00)
+        0x09, 0xC8,                    //   Usage (Set Mode 0xC8)
+        0x15, 0x00,                    //   Logical Minimum (0)
+        0x26, 0xFF, 0x00,              //   Logical Maximum (255)
+        0x75, 0x08,                    //   Report Size (8)
+        0x95, 0x01,                    //   Report Count (1)
+        0xB1, 0x02,                    //   Feature (Data, Var, Abs)
+        0xC0,                          // End Collection (Touch Screen)
+
+        // Report 0x01: Pen / Stylus from hardware descriptor
+        0x05, 0x0D, 0x09, 0x02, 0xA1, 0x01, 0x85, 0x01, 0x09, 0x20, 0x35, 0x00, 0xA1, 0x00, 0x09, 0x32,
+        0x09, 0x42, 0x09, 0x44, 0x09, 0x3C, 0x09, 0x45, 0x15, 0x00, 0x25, 0x01, 0x75, 0x01, 0x95, 0x05,
+        0x81, 0x02, 0x95, 0x03, 0x81, 0x03, 0x05, 0x01, 0x09, 0x30, 0x75, 0x10, 0x95, 0x01, 0xA4, 0x55,
+        0x0E, 0x65, 0x11, 0x46, 0xD7, 0x0B, 0x26, 0x80, 0x25, 0x81, 0x02, 0x09, 0x31, 0x46, 0xDA, 0x07,
+        0x26, 0x20, 0x1C, 0x81, 0x02, 0xB4, 0x05, 0x0D, 0x09, 0x30, 0x26, 0x00, 0x10, 0x81, 0x02, 0xA4,
+        0x55, 0x0E, 0x65, 0x14, 0x36, 0xD8, 0xDC, 0x46, 0x28, 0x23, 0x26, 0x50, 0x46, 0x09, 0x3D, 0x81,
+        0x02, 0x09, 0x3E, 0x81, 0x02, 0x55, 0x0C, 0x66, 0x01, 0x10, 0x35, 0x00, 0x47, 0xFF, 0xFF, 0x00,
+        0x00, 0x27, 0xFF, 0xFF, 0x00, 0x00, 0x09, 0x56, 0x81, 0x02, 0xB4, 0x06, 0x00, 0xFF, 0x09, 0x01,
+        0x75, 0x08, 0x95, 0x01, 0x81, 0x02, 0x81, 0x03, 0xC0, 0xC0
+    };
 }
 
 bool SurfaceTouch::wait32(uint32_t o, uint32_t mask, uint32_t v) {
@@ -267,9 +332,12 @@ bool SurfaceTouch::initDevice() {
 
 void SurfaceTouch::rxPut(unsigned idx) {
     auto prd = reinterpret_cast<PRD *>(rxPrds.addr) + idx * rxPages;
-    prd->addr = rxBufs[idx].dma >> 10;
-    prd->size = (rxPages * PAGE_SIZE) | PrdFlagEnd;
-    prd->unused = 0;
+    const uint64_t dmaBase = rxBufs[idx].dma;
+    for (uint32_t p = 0; p < rxPages; ++p) {
+        prd[p].addr = (dmaBase + p * PAGE_SIZE) >> 10;
+        prd[p].size = PAGE_SIZE | (p == rxPages - 1 ? PrdFlagEnd : 0);
+        prd[p].unused = 0;
+    }
     __sync_synchronize();
 }
 
@@ -407,7 +475,31 @@ void SurfaceTouch::handleRx(const uint8_t *data, uint32_t len) {
     switch (code) {
     case RxInputReport:
         ++counts[2];
-        if (hid && reportBuffer && size <= reportBuffer->getCapacity()) {
+        if (size >= 6 && payload[0] == 0x40) {
+            const uint8_t tip = payload[1] & 1;
+            const uint16_t x = uint16_t(payload[2] | (uint16_t(payload[3]) << 8));
+            const uint16_t y = uint16_t(payload[4] | (uint16_t(payload[5]) << 8));
+
+            static uint32_t touchLogCount = 0;
+            if (touchLogCount < 20 || (touchLogCount % 50 == 0)) {
+                IOLog("SurfaceTouch: touch #%u: tip=%d x=%u y=%u\n", ++touchLogCount, tip, x, y);
+            }
+
+            uint8_t synth[7];
+            synth[0] = 0x40;
+            synth[1] = tip; // bit 0 = tip switch, bits 1..7 = contact id 0
+            synth[2] = payload[2];
+            synth[3] = payload[3];
+            synth[4] = payload[4];
+            synth[5] = payload[5];
+            synth[6] = tip ? 1 : 0; // contact count (1 when pressed, 0 when lifted)
+
+            if (hid && reportBuffer) {
+                memcpy(reportBuffer->getBytesNoCopy(), synth, sizeof(synth));
+                reportBuffer->setLength(sizeof(synth));
+                hid->handleReport(reportBuffer, kIOHIDReportTypeInput);
+            }
+        } else if (hid && reportBuffer && size <= reportBuffer->getCapacity()) {
             memcpy(reportBuffer->getBytesNoCopy(), payload, size);
             reportBuffer->setLength(size);
             hid->handleReport(reportBuffer, kIOHIDReportTypeInput);
@@ -688,6 +780,11 @@ bool SurfaceTouch::start(IOService *provider) {
         }
         IOLog("SurfaceTouch: HID report descriptor ready (%u bytes)\n", rdescSize);
 
+        // Put touch digitizer into active SingleTouch streaming mode (Report 5, Mode 0)
+        uint8_t modeCmd[2] = { 0x05, 0x00 };
+        IOReturn mr = sendData(Tx::SetFeature, modeCmd, sizeof(modeCmd));
+        IOLog("SurfaceTouch: set Singletouch mode (Report 5) result=0x%08x\n", mr);
+
         hid = OSTypeAlloc(SurfaceTouchHIDDevice);
         if (!hid || !hid->init(this) || !hid->attach(this)) {
             failStep = 31;
@@ -739,8 +836,7 @@ void SurfaceTouch::stop(IOService *provider) {
         w8(DmaTxNumPrds, 0);
     }
     if (hid) {
-        hid->terminate(kIOServiceSynchronous);
-        OSSafeReleaseNULL(hid);
+        hid->terminate();
     }
     if (pci) pci->close(this);
     super::stop(provider);
@@ -781,11 +877,20 @@ bool SurfaceTouchHIDDevice::init(SurfaceTouch *owner) {
     return true;
 }
 
+bool SurfaceTouchHIDDevice::handleStart(IOService *provider) {
+    if (!super::handleStart(provider)) return false;
+    setProperty("Built-In", kOSBooleanTrue);
+    setProperty("HIDDefaultBehavior", kOSBooleanTrue);
+    return true;
+}
+
+void SurfaceTouchHIDDevice::handleStop(IOService *provider) {
+    thc = nullptr;
+    super::handleStop(provider);
+}
+
 IOReturn SurfaceTouchHIDDevice::newReportDescriptor(IOMemoryDescriptor **descriptor) const {
-    uint32_t size = 0;
-    auto data = thc ? thc->reportDescriptor(size) : nullptr;
-    if (!data || !size) return kIOReturnNotReady;
-    auto md = IOBufferMemoryDescriptor::withBytes(data, size, kIODirectionNone);
+    auto md = IOBufferMemoryDescriptor::withBytes(sAugmentedDescriptor, sizeof(sAugmentedDescriptor), kIODirectionNone);
     if (!md) return kIOReturnNoMemory;
     *descriptor = md;
     return kIOReturnSuccess;
@@ -808,7 +913,11 @@ OSNumber *SurfaceTouchHIDDevice::newVendorIDNumber() const {
 }
 
 OSNumber *SurfaceTouchHIDDevice::newProductIDNumber() const {
-    return OSNumber::withNumber(thc ? thc->productID() : 0, 32);
+    return OSNumber::withNumber(thc ? thc->productID() : 0x0C1B, 32);
+}
+
+OSNumber *SurfaceTouchHIDDevice::newVersionNumber() const {
+    return OSNumber::withNumber(0x0100, 32);
 }
 
 OSNumber *SurfaceTouchHIDDevice::newLocationIDNumber() const {
@@ -816,7 +925,7 @@ OSNumber *SurfaceTouchHIDDevice::newLocationIDNumber() const {
 }
 
 IOReturn SurfaceTouchHIDDevice::setReport(IOMemoryDescriptor *report, IOHIDReportType reportType, IOOptionBits options) {
-    if (!thc || !report) return kIOReturnBadArgument;
+    if (!report) return kIOReturnBadArgument;
     const uint8_t id = uint8_t(options & 0xFF);
     const auto len = uint32_t(min(report->getLength(), IOByteCount(4096)));
     auto buf = static_cast<uint8_t *>(IOMalloc(len + 1));
@@ -829,33 +938,34 @@ IOReturn SurfaceTouchHIDDevice::setReport(IOMemoryDescriptor *report, IOHIDRepor
         data = buf;
         size = len + 1;
     }
-    IOReturn r = kIOReturnUnsupported;
-    if (reportType == kIOHIDReportTypeFeature)
-        r = thc->sendData(SurfaceTouch::Tx::SetFeature, data, size);
-    else if (reportType == kIOHIDReportTypeOutput)
-        r = thc->sendData(SurfaceTouch::Tx::OutputReport, data, size);
+    IOReturn r = kIOReturnSuccess;
+    if (thc) {
+        if (reportType == kIOHIDReportTypeFeature)
+            r = thc->sendData(SurfaceTouch::Tx::SetFeature, data, size);
+        else if (reportType == kIOHIDReportTypeOutput)
+            r = thc->sendData(SurfaceTouch::Tx::OutputReport, data, size);
+    }
     IOFree(buf, len + 1);
     return r;
 }
 
 IOReturn SurfaceTouchHIDDevice::getReport(IOMemoryDescriptor *report, IOHIDReportType reportType, IOOptionBits options) {
-    if (!thc || !report) return kIOReturnBadArgument;
+    if (!report) return kIOReturnBadArgument;
     const uint8_t id = uint8_t(options & 0xFF);
+    if (reportType == kIOHIDReportTypeFeature) {
+        if (id == 0x05) {
+            uint8_t buf[2] = { 0x05, 0x00 };
+            report->writeBytes(0, buf, sizeof(buf));
+            return kIOReturnSuccess;
+        }
+    }
+    if (!thc) return kIOReturnNotReady;
     const auto len = uint32_t(min(report->getLength(), IOByteCount(4160)));
     if (!len) return kIOReturnBadArgument;
     auto buf = static_cast<uint8_t *>(IOMalloc(len));
     if (!buf) return kIOReturnNoMemory;
     uint32_t size = len;
-    IOReturn r = kIOReturnUnsupported;
-    if (reportType == kIOHIDReportTypeFeature) {
-        r = thc->getFeature(id, buf, size);
-        if (r != kIOReturnSuccess && id && id == thc->contactMaxReport && len >= 2) {
-            buf[0] = id;
-            buf[1] = thc->contactMaxValue;
-            size = 2;
-            r = kIOReturnSuccess;
-        }
-    }
+    IOReturn r = thc->getFeature(id, buf, size);
     if (r == kIOReturnSuccess) {
         report->writeBytes(0, buf, size);
         if (auto b = OSDynamicCast(IOBufferMemoryDescriptor, report))
