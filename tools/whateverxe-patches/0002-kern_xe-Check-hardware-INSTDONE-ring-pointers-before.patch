@@ -1,0 +1,84 @@
+From f4efe71f32123ee7dc5fe84649d950bff073f702 Mon Sep 17 00:00:00 2001
+From: linuxdev <133996182+besiple@users.noreply.github.com>
+Date: Sun, 15 Nov 2026 12:56:57 +0200
+Subject: [PATCH 2/2] kern_xe: Check hardware INSTDONE/ring pointers before
+ Render ForceWake suspend, fix multi-engine reset and empty slot handling
+
+---
+ WhateverXe/kern_xe.cpp | 28 ++++++++++++++++++++++++----
+ 1 file changed, 24 insertions(+), 4 deletions(-)
+
+diff --git a/WhateverXe/kern_xe.cpp b/WhateverXe/kern_xe.cpp
+index 10461dc..17e11af 100644
+--- a/WhateverXe/kern_xe.cpp
++++ b/WhateverXe/kern_xe.cpp
+@@ -15036,7 +15036,7 @@ static uint32_t tglRenderWakeActive {0}; // 0 = idle/released, 1 = active/held
+ static uint32_t tglRCSBusy {0}; // 1 = context active on RCS, 0 = idle
+ static uint64_t tglRenderWakeLastSubmit {0}; // uptime ticks
+ static uint64_t tglRenderWakeSeq {0};
+-static uint64_t tglRenderWakeTimeoutNs {250ULL * 1000ULL * 1000ULL}; // 250ms default
++static uint64_t tglRenderWakeTimeoutNs {1000ULL * 1000ULL * 1000ULL}; // 1000ms default
+ static bool tglRenderWakeHoldForever {false};
+ static uint64_t tglRenderWakeAcquires {0};
+ static uint64_t tglRenderWakeSuspends {0};
+@@ -15060,11 +15060,24 @@ static void tglRenderWakeTimerCallback(thread_call_param_t, thread_call_param_t)
+  if (__atomic_load_n(&tglRCSBusy, __ATOMIC_ACQUIRE)) {
+   __atomic_fetch_add(&tglRenderWakeDeclines, 1ULL, __ATOMIC_RELAXED);
+   uint64_t recheckTicks = 0;
+-  nanoseconds_to_absolutetime(50ULL * 1000ULL * 1000ULL, &recheckTicks);
++  nanoseconds_to_absolutetime(100ULL * 1000ULL * 1000ULL, &recheckTicks);
+   thread_call_enter_delayed(tglRenderWakeCall, now + recheckTicks);
+   return;
+  }
+ 
++ if (auto base = tglHostBase()) {
++  const uint32_t instdone = *reinterpret_cast<volatile uint32_t *>(base + 0x206C);
++  const uint32_t ringHead = *reinterpret_cast<volatile uint32_t *>(base + 0x2034) & 0x001FFFF8;
++  const uint32_t ringTail = *reinterpret_cast<volatile uint32_t *>(base + 0x2030) & 0x001FFFF8;
++  if (instdone != 0xFFFFFFFFU || ringHead != ringTail) {
++   __atomic_fetch_add(&tglRenderWakeDeclines, 1ULL, __ATOMIC_RELAXED);
++   uint64_t recheckTicks = 0;
++   nanoseconds_to_absolutetime(100ULL * 1000ULL * 1000ULL, &recheckTicks);
++   thread_call_enter_delayed(tglRenderWakeCall, now + recheckTicks);
++   return;
++  }
++ }
++
+  const uint64_t seqBefore = __atomic_load_n(&tglRenderWakeSeq, __ATOMIC_ACQUIRE);
+  uint32_t expected = 1;
+  if (!__atomic_compare_exchange_n(&tglRenderWakeActive, &expected, 0U, false, __ATOMIC_ACQ_REL, __ATOMIC_ACQUIRE)) {
+@@ -15275,7 +15288,7 @@ bool XE::installTGLCSB12(KernelPatcher &patcher,size_t index,mach_vm_address_t a
+   if (modes) {root->setProperty("TGLCSBModeAtInit",modes);modes->release();}
+   tglRenderWakeHoldForever = checkKernelArgument("-wex-tgl-hold-render-wake");
+   if (!tglRenderWakeHoldForever) {
+-   uint32_t timeoutMs = 250;
++   uint32_t timeoutMs = 1000;
+    PE_parse_boot_argn("-wex-tgl-wake-timeout", &timeoutMs, sizeof(timeoutMs));
+    if (timeoutMs < 10) timeoutMs = 10;
+    if (timeoutMs > 5000) timeoutMs = 5000;
+@@ -15315,7 +15328,10 @@ void XE::wrapTGLCSBReset(void *streamer) {
+  if (tglRenderWakeCall) thread_call_cancel(tglRenderWakeCall);
+  __atomic_store_n(&tglRenderWakeActive, 0U, __ATOMIC_RELEASE);
+  __atomic_store_n(&tglRCSBusy, 0U, __ATOMIC_RELEASE);
+- tglCSBInitialize(streamer);
++ for (unsigned i = 0; i < arrsize(tglCSBEngines); ++i) {
++  if (tglCSBEngines[i].streamer)
++   tglCSBInitialize(tglCSBEngines[i].streamer);
++ }
+  FunctionCast(wrapTGLCSBReset,callbackXE->orgTGLCSBReset)(streamer);
+ }
+ void XE::wrapTGLCSBProcess(void *streamer,uint32_t flags) {
+@@ -15330,6 +15346,10 @@ void XE::wrapTGLCSBProcess(void *streamer,uint32_t flags) {
+   *reinterpret_cast<uint32_t *>(io.streamer+0x1C04)=engine.state.head;
+   // Publish the consumed sentinel before a handler can enqueue further work.
+   __asm__ volatile("sfence" ::: "memory");
++  if (sample.raw == 0) {
++   ++engine.consumed;
++   return true;
++  }
+   TGLHostRecord *record=nullptr;
+   if (tglHost.owner==io.owner) {
+    const auto n=__sync_fetch_and_add(&tglHost.csbs,1);
+-- 
+2.50.1 (Apple Git-155)
+
