@@ -16,7 +16,7 @@ Complete turn-key OpenCore EFI configuration, custom ACPI SSDTs, patched kernel 
 | **CPU** | Intel Core i7-11370H (4C/8T, up to 4.8 GHz) | ✅ Working | Custom `CPUFriendDataProvider` (EPP 0x80, LFM 800MHz), C7 Package Residency >60% |
 | **iGPU** | Intel Iris Xe Graphics 96EU (`0x9A49`) | ✅ Working | Metal 3 Acceleration (`WhateverXe` Rev 4 with hardware `INSTDONE` erratum guard) |
 | **Display** | 14.4" PixelSense Flow (2400 × 1600) | ✅ Working | **120 Hz ProMotion Refresh Rate**, native eDP brightness controls |
-| **Sleep / Wake** | ACPI S3 & Instant Hibernation | ✅ Working | `SSDT-S3.aml` injection + OpenCore `HibernateMode=Auto` + NVRAM Preboot default |
+| **Sleep / Wake** | Modern Standby (S0ix / Deep Idle) | ✅ Working | `SSDT-DEEPIDLE.aml` + `S0ixStandby.kext` (v0.5.4) + WhateverXe wake GPU reset |
 | **dGPU** | NVIDIA GeForce RTX 3050 Ti Laptop (4 GB GDDR6) | 🔬 Experimental | Disabled via `SSDT-dGPU-Off.aml` for battery, or compute via `nullmoth-kit` |
 | **Thunderbolt 4 / USB-C** | 2× Thunderbolt 4 (TCSS / XHCI) | ✅ Working | Full USB 2.0 & USB 3.0 port mapping via `USBMap.kext` |
 | **Bluetooth** | Intel Wi-Fi 6 AX201 Bluetooth (8087:0029) | ✅ Working | Internal port `HS10` (`IntelBTPatcher` + `BlueToolFixup`) |
@@ -37,10 +37,12 @@ Complete turn-key OpenCore EFI configuration, custom ACPI SSDTs, patched kernel 
   3. Graceful handling of empty CSB sample slots in intake loop.
 * **Source:** See `tools/whateverxe-patches/`.
 
-### 2. ACPI S3 Sleep & Instant Hibernation (`SSDT-S3.aml`)
-* **Problem:** Microsoft Surface firmware omits the ACPI `_S3` sleep table (Modern Standby only). At boot, macOS `AppleACPIPlatformExpert::evaluateSleepStates()` found only S4/S5 and cleared its sleep capability bit, causing `queryPlatformCanSleep()` to fail with `kIOReturnNotResponding` (`0xe00002e2`) and throwing `IOPMrootDomain` into a broken 30-second darkwake loop (`kPMPCIUnsupported`).
-* **Fix:** Injected custom `SSDT-S3.aml` declaring `Name (\_S3, Package (0x04) { 0x05, 0x05, Zero, Zero })`. macOS now successfully registers `ACPI: sleep states S3 S4 S5`.
-* Paired with OpenCore `HibernateMode=Auto` and `HibernateSkipsPicker=True`, the machine sleeps and wakes via NVMe in ~1-2 seconds.
+### 2. Modern Standby (S0ix / Deep Idle) & Wake GPU Reset (`SSDT-DEEPIDLE.aml` + `S0ixStandby.kext`)
+* **Problem:** Microsoft Surface Laptop Studio (Intel Tiger Lake-H35 `i7-11370H` + Surface SAM) lacks native ACPI S3 suspend-to-RAM in firmware. The platform strictly implements Modern Standby (S0ix / Low Power Idle). Forcing traditional S3 results in power rail cuts and cold reboots upon opening the lid.
+* **Fix:**
+  1. Injected `SSDT-DEEPIDLE.aml` declaring `\_SB.LPS0` and `\_GPE.LXEN` returning `One` for Darwin. This informs `AppleACPIPlatform` of native S0 sleep, publishing `IOPMDeepIdleSupported = Yes` and enabling macOS **Deep Idle (Sleep Type 7)** via XNU `acpi_idle_kernel()`. The CPU package enters C10 (<1W) while preserving RAM contents.
+  2. Installed `S0ixStandby.kext` (v0.5.4) to match ACPI device `PEPD` (`PNP0D80`). On wake, it executes a hardware GT engine reset (`__intel_gt_reset`) on the Iris Xe 96EU (`8086:9A49`) before `WhateverXe` wakes, ensuring Metal 3 graphics acceleration resumes smoothly without kernel panics or black screens.
+  3. Configured `pmset`: `hibernatemode 0`, `standby 0`, `powernap 0`, `tcpkeepalive 0`, `proximitywake 0`.
 
 ### 3. CPU Power Management & Quiet Cooling (`CPUFriend`)
 * **Problem:** Under the `MacBookPro16,2` profile, the i7-11370H CPU ran at constant turbo boost (3.3–4.4 GHz) drawing 18W+ at idle with 0% C-States, keeping the fans spinning.
@@ -97,7 +99,7 @@ EFI/
     │   ├── SSDT-PLUG.aml
     │   ├── SSDT-PNLF.aml
     │   ├── SSDT-RTC0.aml
-    │   ├── SSDT-S3.aml          <-- ACPI S3 sleep injection
+    │   ├── SSDT-DEEPIDLE.aml    <-- Modern Standby / Deep Idle injection (S0ix)
     │   ├── SSDT-SGPC.aml
     │   ├── SSDT-USB-Ports.aml
     │   └── SSDT-dGPU-Off.aml
@@ -120,6 +122,7 @@ EFI/
     │   ├── Lilu.kext
     │   ├── NVMeFix.kext
     │   ├── RestrictEvents.kext
+    │   ├── S0ixStandby.kext     <-- S0ix Modern Standby PM & Iris Xe GT reset
     │   ├── SMCProcessor.kext
     │   ├── SMCSuperIO.kext
     │   ├── SimpleHDA.kext
