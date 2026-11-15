@@ -625,6 +625,24 @@
 				<key>PlistPath</key>
 				<string>Contents/Info.plist</string>
 			</dict>
+			<dict>
+				<key>Arch</key>
+				<string>x86_64</string>
+				<key>BundlePath</key>
+				<string>HibernationFixup.kext</string>
+				<key>Comment</key>
+				<string>Acidanthera Hibernation and Sleep PCI State Restorer</string>
+				<key>Enabled</key>
+				<true/>
+				<key>ExecutablePath</key>
+				<string>Contents/MacOS/HibernationFixup</string>
+				<key>MaxKernel</key>
+				<string></string>
+				<key>MinKernel</key>
+				<string>14.0.0</string>
+				<key>PlistPath</key>
+				<string>Contents/Info.plist</string>
+			</dict>
 		</array>
 		<key>Block</key>
 		<array/>
@@ -872,7 +890,7 @@
 				AAAAAAAAAAAAAAAAAAA=
 				</data>
 				<key>boot-args</key>
-				<string>debug=0x100 keepsyms=1 -lilubetaall -revbeta -ibtcompatbeta -amfipassbeta -allow3d -disablegfxfirmware -igfxdvmt alcid=28 shda-lang=en -s0ixd3 -s0ixacnortc -s0ixdbg</string>
+				<string>debug=0x100 keepsyms=1 -lilubetaall -revbeta -ibtcompatbeta -amfipassbeta -allow3d -disablegfxfirmware -igfxdvmt alcid=28 shda-lang=en -s0ixdbg</string>
 				<key>csr-active-config</key>
 				<data>
 				AwgAAA==
